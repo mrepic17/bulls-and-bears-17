@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BULLS AND BEARS Live Stock Trading Simulator</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f5f7fa;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 15px;
+  }
+  #wallet {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    font-weight: bold;
+    text-align: center;
+  }
+  #container {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+  .panel {
+    background: white;
+    box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    padding: 15px;
+    width: 480px;
+    max-width: 100%;
+  }
+  h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  th, td {
+    border-bottom: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+  }
+  th {
+    background-color: #007bff;
+    color: white;
+    user-select: none;
+  }
+  td.price, td.change-amount, td.change-percent {
+    font-weight: 600;
+  }
+  td.change-amount.profit, td.change-percent.profit {
+    color: green;
+  }
+  td.change-amount.loss, td.change-percent.loss {
+    color: red;
+  }
+  td.profit {
+    color: green;
+  }
+  td.loss {
+    color: red;
+  }
+  button {
+    padding: 5px 10px;
+    border: none;
+    background: #007bff;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  button:disabled {
+    background: #9ec5fe;
+    cursor: not-allowed;
+  }
+  input[type="number"] {
+    width: 50px;
+    padding: 3px;
+    font-size: 0.9rem;
+    text-align: center;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+  /* Responsive */
+  @media(max-width: 1000px) {
+    #container {
+      flex-direction: column;
+      align-items: center;
+    }
+    .panel {
+      width: 95%;
+      max-width: 480px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>Live Stock Trading Simulator</h1>
+<div id="wallet">Wallet Balance: ₹10,000.00</div>
+
+<div id="container">
+
+  <div class="panel" id="stocks-panel">
+    <h2>Available Stocks</h2>
+    <table id="stocks-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th style="text-align:left; padding-left:10px;">Name</th>
+          <th>Price</th>
+          <th>Change (₹)</th>
+          <th>Change (%)</th>
+          <th>Buy</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="panel" id="portfolio-panel">
+    <h2>Your Portfolio</h2>
+    <table id="portfolio-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th style="text-align:left; padding-left:10px;">Name</th>
+          <th>Quantity</th>
+          <th>Avg Buy Price</th>
+          <th>Current Price</th>
+          <th>P/L (₹)</th>
+          <th>P/L (%)</th>
+          <th>Sell</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <p id="no-portfolio-msg" style="text-align:center; margin-top: 20px; color: #777;">You haven't bought any stocks yet.</p>
+  </div>
+
+</div>
+
+<script>
+  // Initial wallet amount
+  let walletBalance = 10000;
+  const walletDisplay = document.getElementById('wallet');
+
+  // Stock data (real company names, sample prices)
+  const stocks = [
+    { id: "AAPL", name: "Apple Inc.", price: 173.4, prevPrice: 173.4 },
+    { id: "MSFT", name: "Microsoft Corp.", price: 300.5, prevPrice: 300.5 },
+    { id: "GOOGL", name: "Alphabet Inc.", price: 124.7, prevPrice: 124.7 },
+    { id: "AMZN", name: "Amazon.com Inc.", price: 137.2, prevPrice: 137.2 },
+    { id: "TSLA", name: "Tesla Inc.", price: 695.3, prevPrice: 695.3 },
+    { id: "META", name: "Meta Platforms Inc.", price: 326.4, prevPrice: 326.4 },
+    { id: "NVDA", name: "NVIDIA Corp.", price: 285.7, prevPrice: 285.7 },
+    { id: "JPM", name: "JPMorgan Chase & Co.", price: 142.1, prevPrice: 142.1 },
+    { id: "V", name: "Visa Inc.", price: 235.9, prevPrice: 235.9 },
+    { id: "DIS", name: "Walt Disney Co.", price: 93.3, prevPrice: 93.3 },
+    { id: "NFLX", name: "Netflix Inc.", price: 401.8, prevPrice: 401.8 },
+    { id: "ADBE", name: "Adobe Inc.", price: 507.5, prevPrice: 507.5 },
+    { id: "PYPL", name: "PayPal Holdings", price: 68.9, prevPrice: 68.9 },
+    { id: "INTC", name: "Intel Corp.", price: 31.7, prevPrice: 31.7 },
+    { id: "CSCO", name: "Cisco Systems", price: 45.3, prevPrice: 45.3 },
+    { id: "ORCL", name: "Oracle Corp.", price: 103.8, prevPrice: 103.8 },
+    { id: "CRM", name: "Salesforce.com", price: 215.4, prevPrice: 215.4 },
+    { id: "TXN", name: "Texas Instruments", price: 190.2, prevPrice: 190.2 },
+    { id: "QCOM", name: "Qualcomm Inc.", price: 150.3, prevPrice: 150.3 },
+    { id: "IBM", name: "IBM Corp.", price: 125.6, prevPrice: 125.6 },
+    { id: "BABA", name: "Alibaba Group", price: 85.7, prevPrice: 85.7 },
+    { id: "BA", name: "Boeing Co.", price: 195.1, prevPrice: 195.1 },
+    { id: "C", name: "Citigroup Inc.", price: 47.4, prevPrice: 47.4 },
+    { id: "GM", name: "General Motors", price: 37.9, prevPrice: 37.9 },
+    { id: "F", name: "Ford Motor Co.", price: 14.6, prevPrice: 14.6 },
+    { id: "MCD", name: "McDonald's Corp.", price: 280.2, prevPrice: 280.2 },
+    { id: "KO", name: "Coca-Cola Co.", price: 62.7, prevPrice: 62.7 },
+    { id: "PEP", name: "PepsiCo Inc.", price: 185.1, prevPrice: 185.1 },
+    { id: "WMT", name: "Walmart Inc.", price: 139.5, prevPrice: 139.5 },
+    { id: "NKE", name: "Nike Inc.", price: 123.7, prevPrice: 123.7 },
+    { id: "CVX", name: "Chevron Corp.", price: 167.6, prevPrice: 167.6 },
+    { id: "XOM", name: "Exxon Mobil Corp.", price: 110.4, prevPrice: 110.4 },
+    { id: "SBUX", name: "Starbucks Corp.", price: 102.9, prevPrice: 102.9 },
+    { id: "UNH", name: "UnitedHealth Group", price: 495.3, prevPrice: 495.3 },
+    { id: "VZ", name: "Verizon Communications", price: 38.7, prevPrice: 38.7 },
+    { id: "T", name: "AT&T Inc.", price: 19.6, prevPrice: 19.6 },
+    { id: "LMT", name: "Lockheed Martin", price: 467.5, prevPrice: 467.5 },
+    { id: "RTX", name: "Raytheon Technologies", price: 90.1, prevPrice: 90.1 },
+    { id: "GM", name: "General Motors", price: 37.9, prevPrice: 37.9 },
+    { id: "CAT", name: "Caterpillar Inc.", price: 222.8, prevPrice: 222.8 },
+    { id: "PLD", name: "Prologis Inc.", price: 114.2, prevPrice: 114.2 },
+    { id: "SPG", name: "Simon Property Group", price: 113.5, prevPrice: 113.5 },
+    { id: "MO", name: "Altria Group", price: 48.2, prevPrice: 48.2 },
+    { id: "PM", name: "Philip Morris Intl", price: 100.9, prevPrice: 100.9 },
+    { id: "GE", name: "General Electric", price: 85.4, prevPrice: 85.4 },
+    { id: "MMM", name: "3M Company", price: 162.7, prevPrice: 162.7 },
+    { id: "FIS", name: "Fidelity National Info", price: 110.3, prevPrice: 110.3 },
+    { id: "ADI", name: "Analog Devices", price: 157.4, prevPrice: 157.4 }
+  ];
+
+  // Portfolio object: key = stock id, value = { quantity, avgBuyPrice }
+  let portfolio = {};
+
+  // DOM refs
+  const stockTableBody = document.querySelector("#stocks-table tbody");
+  const portfolioTableBody = document.querySelector("#portfolio-table tbody");
+  const noPortfolioMsg = document.getElementById("no-portfolio-msg");
+
+  // Format functions
+  function formatCurrency(num) {
+    return "₹" + num.toFixed(2);
+  }
+  function formatPercent(num) {
+    return num.toFixed(2) + "%";
+  }
+
+  // Render stocks in available stocks table
+  function renderStocks() {
+    stockTableBody.innerHTML = "";
+    stocks.forEach(stock => {
+      const tr = document.createElement("tr");
+      tr.setAttribute("data-id", stock.id);
+      tr.innerHTML = `
+        <td>${stock.id}</td>
+        <td style="text-align:left;padding-left:10px;">${stock.name}</td>
+        <td class="price">${formatCurrency(stock.price)}</td>
+        <td class="change-amount">₹0.00</td>
+        <td class="change-percent">0.00%</td>
+        <td>
+          <input type="number" class="buy-qty" value="1" min="1" style="width:50px;" />
+          <button class="buy" disabled>Buy</button>
+        </td>
+      `;
+      stockTableBody.appendChild(tr);
+
+      const buyBtn = tr.querySelector("button.buy");
+      const qtyInput = tr.querySelector("input.buy-qty");
+
+      function validateBuy() {
+        let qty = parseInt(qtyInput.value);
+        if (isNaN(qty) || qty < 1) qty = 1;
+        qtyInput.value = qty;
+        buyBtn.disabled = (stock.price * qty) > walletBalance;
+      }
+      qtyInput.addEventListener("input", validateBuy);
+      buyBtn.addEventListener("click", () => buyStock(stock.id, parseInt(qtyInput.value) || 1));
+
+      validateBuy();
+    });
+  }
+
+  // Render portfolio
+  function renderPortfolio() {
+    portfolioTableBody.innerHTML = "";
+
+    const ids = Object.keys(portfolio);
+    if (ids.length === 0) {
+      noPortfolioMsg.style.display = "block";
+      return;
+    } else {
+      noPortfolioMsg.style.display = "none";
+    }
+
+    ids.forEach(stockId => {
+      const stock = stocks.find(s => s.id === stockId);
+      if (!stock) return;
+
+      const portfolioData = portfolio[stockId];
+      const plAmount = (stock.price - portfolioData.avgBuyPrice) * portfolioData.quantity;
+      const plPercent = ((stock.price - portfolioData.avgBuyPrice) / portfolioData.avgBuyPrice) * 100;
+
+      const tr = document.createElement("tr");
+      tr.setAttribute("data-id", stockId);
+      tr.innerHTML = `
+        <td>${stockId}</td>
+        <td style="text-align:left;padding-left:10px;">${stock.name}</td>
+        <td>${portfolioData.quantity}</td>
+        <td>${formatCurrency(portfolioData.avgBuyPrice)}</td>
+        <td>${formatCurrency(stock.price)}</td>
+        <td class="${plAmount > 0 ? "profit" : (plAmount < 0 ? "loss" : "")}">${formatCurrency(plAmount)}</td>
+        <td class="${plAmount > 0 ? "profit" : (plAmount < 0 ? "loss" : "")}">${formatPercent(plPercent)}</td>
+        <td>
+          <input type="number" class="sell-qty" value="1" min="1" max="${portfolioData.quantity}" style="width:50px;" />
+          <button class="sell">Sell</button>
+        </td>
+      `;
+      portfolioTableBody.appendChild(tr);
+
+      const sellBtn = tr.querySelector("button.sell");
+      const sellQtyInput = tr.querySelector("input.sell-qty");
+
+      function validateSell() {
+        let qty = parseInt(sellQtyInput.value);
+        if (isNaN(qty) || qty < 1) qty = 1;
+        if (qty > portfolioData.quantity) qty = portfolioData.quantity;
+        sellQtyInput.value = qty;
+        sellBtn.disabled = qty > portfolioData.quantity;
+      }
+
+      sellQtyInput.addEventListener("input", validateSell);
+      sellBtn.addEventListener("click", () => sellStock(stockId, parseInt(sellQtyInput.value) || 1));
+
+      validateSell();
+    });
+  }
+
+  // Buy stock
+  function buyStock(stockId, quantity) {
+    const stock = stocks.find(s => s.id === stockId);
+    if (!stock || quantity < 1) return;
+
+    const cost = stock.price * quantity;
+    if (cost > walletBalance) {
+      alert("Insufficient funds!");
+      return;
+    }
+
+    walletBalance -= cost;
+
+    if (!portfolio[stockId]) {
+      portfolio[stockId] = { quantity: 0, avgBuyPrice: 0 };
+    }
+    // Update average buy price
+    const currentQty = portfolio[stockId].quantity;
+    const currentAvg = portfolio[stockId].avgBuyPrice;
+    const newQty = currentQty + quantity;
+    const newAvg = ((currentAvg * currentQty) + (stock.price * quantity)) / newQty;
+
+    portfolio[stockId].quantity = newQty;
+    portfolio[stockId].avgBuyPrice = newAvg;
+
+    updateWalletDisplay();
+    renderPortfolio();
+    renderStocks();
+  }
+
+  // Sell stock
+  function sellStock(stockId, quantity) {
+    const stock = stocks.find(s => s.id === stockId);
+    if (!stock || quantity < 1) return;
+
+    if (!portfolio[stockId] || portfolio[stockId].quantity < quantity) {
+      alert("Not enough shares to sell!");
+      return;
+    }
+
+    const revenue = stock.price * quantity;
+    walletBalance += revenue;
+
+    portfolio[stockId].quantity -= quantity;
+    if (portfolio[stockId].quantity === 0) {
+      delete portfolio[stockId];
+    }
+
+    updateWalletDisplay();
+    renderPortfolio();
+    renderStocks();
+  }
+
+  // Update wallet display
+  function updateWalletDisplay() {
+    walletDisplay.textContent = `Wallet Balance: ₹${walletBalance.toFixed(2)}`;
+  }
+
+  // Update a single stock row's price and change
+  function updateStockRow(stock) {
+    const tr = stockTableBody.querySelector(`tr[data-id="${stock.id}"]`);
+    if (!tr) return;
+
+    const priceTd = tr.querySelector("td.price");
+    const changeAmountTd = tr.querySelector("td.change-amount");
+    const changePercentTd = tr.querySelector("td.change-percent");
+
+    const changeAmount = stock.price - stock.prevPrice;
+    const changePercent = (changeAmount / stock.prevPrice) * 100;
+
+    priceTd.textContent = formatCurrency(stock.price);
+
+    changeAmountTd.textContent = (changeAmount >= 0 ? "₹" : "-₹") + Math.abs(changeAmount).toFixed(2);
+    changePercentTd.textContent = (changePercent >= 0 ? "+" : "-") + Math.abs(changePercent).toFixed(2) + "%";
+
+    changeAmountTd.className = changeAmount > 0 ? "change-amount profit" : (changeAmount < 0 ? "change-amount loss" : "change-amount");
+    changePercentTd.className = changePercent > 0 ? "change-percent profit" : (changePercent < 0 ? "change-percent loss" : "change-percent");
+  }
+
+  // Update all buy buttons enabling/disabling based on wallet and quantity input
+  function updateAllBuyButtons() {
+    stocks.forEach(stock => {
+      const tr = stockTableBody.querySelector(`tr[data-id="${stock.id}"]`);
+      if (!tr) return;
+      const buyBtn = tr.querySelector("button.buy");
+      const qtyInput = tr.querySelector("input.buy-qty");
+
+      let qty = parseInt(qtyInput.value);
+      if (isNaN(qty) || qty < 1) qty = 1;
+      buyBtn.disabled = (stock.price * qty) > walletBalance;
+    });
+  }
+
+  // Slow price updates every 2 seconds (±0.1%)
+  function updatePrices() {
+    stocks.forEach(stock => {
+      stock.prevPrice = stock.price;
+
+      // Random percentage between -0.1 and +0.1
+      const pctChange = (Math.random() * 0.2) - 0.1;
+      const change = stock.price * (pctChange / 100);
+
+      let newPrice = stock.price + change;
+      if (newPrice < 1) newPrice = 1; // minimum price
+
+      stock.price = newPrice;
+
+      updateStockRow(stock);
+
+      // Update portfolio row if owned
+      if (portfolio[stock.id]) {
+        renderPortfolio();
+      }
+    });
+
+    updateAllBuyButtons();
+  }
+
+  // Initial rendering
+  updateWalletDisplay();
+  renderStocks();
+  renderPortfolio();
+
+  // Start periodic price updates
+  setInterval(updatePrices, 2000);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,399 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phone OTP + Name + PIN Login with Welcome & Wallet</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      height: 100vh;
+      margin: 0;
+      justify-content: center;
+      align-items: center;
+    }
+    #container {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 8px;
+      width: 320px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    input, button {
+      width: 100%;
+      padding: 0.7rem;
+      margin-top: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+    input[readonly] {
+      background: #eee;
+      cursor: not-allowed;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #9ec5fe;
+      cursor: not-allowed;
+    }
+    .hidden { display: none; }
+    p.message {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+    p.error {
+      color: red;
+    }
+    p.success {
+      color: green;
+    }
+    #phone-display {
+      font-weight: bold;
+      margin-top: 0.5rem;
+    }
+    h2 {
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+
+    <!-- Step 0: Enter Phone -->
+    <div id="phone-step" class="">
+      <h2>Enter Phone Number</h2>
+      <input id="phone-input" type="tel" placeholder="1234567890">
+      <button id="send-otp-btn" disabled="">Send OTP</button>
+      <p id="phone-error" class="message error"></p>
+    </div>
+
+    <!-- Show phone if remembered -->
+    <div id="phone-remembered" class="hidden">
+      <h2>Phone Number</h2>
+      <p id="phone-display"></p>
+      <button id="change-phone-btn">Change Phone Number</button>
+    </div>
+
+    <!-- Step 1: Enter OTP -->
+    <div id="otp-step" class="hidden">
+      <h2>Enter OTP</h2>
+      <input id="otp-input" type="text" maxlength="6" placeholder="6-digit OTP">
+      <button id="verify-otp-btn" disabled="">Verify OTP</button>
+      <p id="otp-error" class="message error"></p>
+      <p id="otp-success" class="message success"></p>
+      <button id="resend-btn" style="margin-top:1rem;">Resend OTP</button>
+    </div>
+
+    <!-- Step 2: Enter Name -->
+    <div id="name-step" class="hidden">
+      <h2>Enter Your Name</h2>
+      <input id="name-input" type="text" placeholder="Your name">
+      <button id="name-submit-btn" disabled="">Submit Name</button>
+      <p id="name-error" class="message error"></p>
+    </div>
+
+    <!-- Step 3a: Set PIN for new user -->
+    <div id="set-pin-step" class="hidden">
+      <h2>Set 4-digit PIN</h2>
+      <input id="set-pin-input" type="password" maxlength="4" placeholder="Enter 4-digit PIN">
+      <button id="set-pin-btn" disabled="">Set PIN</button>
+      <p id="set-pin-error" class="message error"></p>
+    </div>
+
+    <!-- Step 3b: Enter PIN for returning user -->
+    <div id="enter-pin-step" class="hidden">
+      <h2>Enter your 4-digit PIN</h2>
+      <input id="enter-pin-input" type="password" maxlength="4" placeholder="Enter PIN">
+      <button id="enter-pin-btn" disabled="">Login</button>
+      <p id="enter-pin-error" class="message error"></p>
+      <p id="enter-pin-success" class="message success"></p>
+    </div>
+
+    <!-- Welcome Page -->
+    <div id="welcome-step" class="hidden">
+      <h2>Welcome, <span id="welcome-name"></span>!</h2>
+      <label>Wallet Amount:</label>
+      <input id="wallet-amount" type="text" readonly="">
+      <p style="margin-top:1rem; font-size:0.9rem;">Redirecting to dashboard...</p>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard-step" class="hidden">
+      <h2>Your Dashboard</h2>
+      <label>Wallet Amount:</label>
+      <input id="dashboard-wallet" type="text" readonly="">
+      <p style="margin-top:1rem;">You can now start trading in the fake stock market!</p>
+	  <a href="new7.html" id="buy-stock-link" style="display:inline-block; width:100%; padding:0.7rem; margin-top:1rem; background:#007bff; color:white; text-decoration:none; border-radius:5px; text-align:center; font-size:1rem; cursor:pointer;">
+    Buy Stocks
+  </a>
+    </div>
+
+  </div>
+
+<script>
+  const mockOTP = "123456"; // Mock OTP for demo
+  const INITIAL_WALLET = 10000;
+
+  // Elements
+  const phoneStep = document.getElementById('phone-step');
+  const phoneInput = document.getElementById('phone-input');
+  const sendOtpBtn = document.getElementById('send-otp-btn');
+  const phoneError = document.getElementById('phone-error');
+  const phoneRemembered = document.getElementById('phone-remembered');
+  const phoneDisplay = document.getElementById('phone-display');
+  const changePhoneBtn = document.getElementById('change-phone-btn');
+  const otpStep = document.getElementById('otp-step');
+  const otpInput = document.getElementById('otp-input');
+  const verifyOtpBtn = document.getElementById('verify-otp-btn');
+  const otpError = document.getElementById('otp-error');
+  const otpSuccess = document.getElementById('otp-success');
+  const resendBtn = document.getElementById('resend-btn');
+  const nameStep = document.getElementById('name-step');
+  const nameInput = document.getElementById('name-input');
+  const nameSubmitBtn = document.getElementById('name-submit-btn');
+  const nameError = document.getElementById('name-error');
+  const setPinStep = document.getElementById('set-pin-step');
+  const setPinInput = document.getElementById('set-pin-input');
+  const setPinBtn = document.getElementById('set-pin-btn');
+  const setPinError = document.getElementById('set-pin-error');
+  const enterPinStep = document.getElementById('enter-pin-step');
+  const enterPinInput = document.getElementById('enter-pin-input');
+  const enterPinBtn = document.getElementById('enter-pin-btn');
+  const enterPinError = document.getElementById('enter-pin-error');
+  const enterPinSuccess = document.getElementById('enter-pin-success');
+  const welcomeStep = document.getElementById('welcome-step');
+  const welcomeName = document.getElementById('welcome-name');
+  const walletAmount = document.getElementById('wallet-amount');
+  const dashboardStep = document.getElementById('dashboard-step');
+  const dashboardWallet = document.getElementById('dashboard-wallet');
+
+  let currentPhone = "";
+  let currentName = "";
+
+  function getUsers() {
+    return JSON.parse(localStorage.getItem('users') || '{}');
+  }
+
+  function saveUser(phone, pin, name, wallet) {
+    let users = getUsers();
+    users[phone] = { pin, name, wallet };
+    localStorage.setItem('users', JSON.stringify(users));
+  }
+
+  function getUser(phone) {
+    let users = getUsers();
+    return users[phone];
+  }
+
+  window.onload = () => {
+    const savedPhone = sessionStorage.getItem('phone');
+    const otpVerified = sessionStorage.getItem('otpVerified') === 'true';
+
+    if (savedPhone && otpVerified) {
+      currentPhone = savedPhone;
+      const user = getUser(currentPhone);
+      if (user && user.pin) {
+        currentName = user.name;
+        showPhoneRemembered();
+        showEnterPinStep();
+      } else {
+        showPhoneRemembered();
+        showNameStep();
+      }
+    } else if (savedPhone) {
+      currentPhone = savedPhone;
+      showPhoneRemembered();
+      showOtpStep();
+    } else {
+      showPhoneStep();
+    }
+  };
+
+  function hideAllSteps() {
+    [phoneStep, phoneRemembered, otpStep, nameStep, setPinStep, enterPinStep, welcomeStep, dashboardStep]
+      .forEach(step => step.classList.add('hidden'));
+  }
+
+  function showStep(step) {
+    hideAllSteps();
+    step.classList.remove('hidden');
+  }
+
+  function showPhoneStep() {
+    showStep(phoneStep);
+    sendOtpBtn.disabled = true;
+  }
+
+  function showPhoneRemembered() {
+    showStep(phoneRemembered);
+    phoneDisplay.textContent = currentPhone;
+  }
+
+  function showOtpStep() {
+    showStep(otpStep);
+    otpInput.value = "";
+    verifyOtpBtn.disabled = true;
+  }
+
+  function showNameStep() {
+    showStep(nameStep);
+    nameInput.value = "";
+    nameSubmitBtn.disabled = true;
+    nameError.textContent = "";
+  }
+
+  function showSetPinStep() {
+    showStep(setPinStep);
+    setPinInput.value = "";
+    setPinBtn.disabled = true;
+    setPinError.textContent = "";
+  }
+
+  function showEnterPinStep() {
+    showStep(enterPinStep);
+    enterPinInput.value = "";
+    enterPinBtn.disabled = true;
+    enterPinError.textContent = "";
+    enterPinSuccess.textContent = "";
+  }
+
+  function showWelcomeStep() {
+    showStep(welcomeStep);
+    welcomeName.textContent = currentName;
+
+    const user = getUser(currentPhone);
+    let wallet = (user && user.wallet != null) ? user.wallet : INITIAL_WALLET;
+    walletAmount.value = `₹${wallet.toLocaleString()}`;
+
+    setTimeout(() => {
+      showDashboard(wallet);
+    }, 3000);
+  }
+
+  function showDashboard(wallet) {
+    showStep(dashboardStep);
+    dashboardWallet.value = `₹${wallet.toLocaleString()}`;
+  }
+  
+  phoneInput.addEventListener('input', () => {
+    phoneError.textContent = "";
+    sendOtpBtn.disabled = !/^\d{10}$/.test(phoneInput.value.trim());
+  });
+
+  sendOtpBtn.addEventListener('click', () => {
+    const inputPhone = phoneInput.value.trim();
+    if (!/^\d{10}$/.test(inputPhone)) {
+      phoneError.textContent = "Enter valid 10-digit phone number.";
+      return;
+    }
+    currentPhone = inputPhone;
+    sessionStorage.setItem('phone', currentPhone);
+    sessionStorage.setItem('otpVerified', 'false');
+    phoneError.textContent = "";
+    alert(`Mock OTP sent to ${currentPhone}: ${mockOTP}`);
+    showPhoneRemembered();
+    showOtpStep();
+  });
+
+  changePhoneBtn.addEventListener('click', () => {
+    sessionStorage.removeItem('phone');
+    sessionStorage.removeItem('otpVerified');
+    currentPhone = "";
+    currentName = "";
+    showPhoneStep();
+  });
+
+  otpInput.addEventListener('input', () => {
+    otpError.textContent = "";
+    otpSuccess.textContent = "";
+    verifyOtpBtn.disabled = otpInput.value.trim().length !== 6;
+  });
+
+  verifyOtpBtn.addEventListener('click', () => {
+    if (otpInput.value.trim() !== mockOTP) {
+      otpError.textContent = "Invalid OTP, try again.";
+      otpSuccess.textContent = "";
+      return;
+    }
+    otpError.textContent = "";
+    otpSuccess.textContent = "OTP verified successfully!";
+    sessionStorage.setItem('otpVerified', 'true');
+    setTimeout(() => {
+      showNameStep();
+    }, 800);
+  });
+
+  resendBtn.addEventListener('click', () => {
+    otpError.textContent = "";
+    otpSuccess.textContent = "";
+    otpInput.value = "";
+    verifyOtpBtn.disabled = true;
+    alert(`OTP resent to ${currentPhone}: ${mockOTP}`);
+  });
+
+  nameInput.addEventListener('input', () => {
+    nameError.textContent = "";
+    nameSubmitBtn.disabled = nameInput.value.trim().length < 2;
+  });
+
+  nameSubmitBtn.addEventListener('click', () => {
+    const name = nameInput.value.trim();
+    if (name.length < 2) {
+      nameError.textContent = "Please enter a valid name.";
+      return;
+    }
+    currentName = name;
+    nameError.textContent = "";
+    showSetPinStep();
+  });
+
+  setPinInput.addEventListener('input', () => {
+    setPinError.textContent = "";
+    setPinBtn.disabled = !/^\d{4}$/.test(setPinInput.value.trim());
+  });
+
+  setPinBtn.addEventListener('click', () => {
+    const pin = setPinInput.value.trim();
+    if (!/^\d{4}$/.test(pin)) {
+      setPinError.textContent = "PIN must be exactly 4 digits.";
+      return;
+    }
+    setPinError.textContent = "";
+    saveUser(currentPhone, pin, currentName, INITIAL_WALLET);
+    showWelcomeStep();
+  });
+
+  enterPinInput.addEventListener('input', () => {
+    enterPinError.textContent = "";
+    enterPinSuccess.textContent = "";
+    enterPinBtn.disabled = !/^\d{4}$/.test(enterPinInput.value.trim());
+  });
+
+  enterPinBtn.addEventListener('click', () => {
+    const enteredPin = enterPinInput.value.trim();
+    if (!/^\d{4}$/.test(enteredPin)) {
+      enterPinError.textContent = "PIN must be exactly 4 digits.";
+      return;
+    }
+    const user = getUser(currentPhone);
+    if (!user || enteredPin !== user.pin) {
+      enterPinError.textContent = "Incorrect PIN, try again.";
+      enterPinSuccess.textContent = "";
+      return;
+    }
+    currentName = user.name;
+    enterPinError.textContent = "";
+    enterPinSuccess.textContent = "Login successful!";
+    showWelcomeStep();
+  });
+</script>
+
+</body>
+</html>
